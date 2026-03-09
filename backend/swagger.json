@@ -1,0 +1,557 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Message API",
+    "description": "REST API for managing messages. Migrated from Spring Boot Thymeleaf MVC application to Node.js/Express/TypeScript with Prisma ORM.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/api/messages": {
+      "get": {
+        "summary": "List all messages",
+        "description": "Retrieves all messages from the database, ordered by creation date descending. Equivalent to the original Spring Boot GET / endpoint.",
+        "operationId": "getAllMessages",
+        "tags": ["Messages"],
+        "responses": {
+          "200": {
+            "description": "Successful response with array of messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Message"
+                  }
+                },
+                "example": [
+                  {
+                    "id": 1,
+                    "text": "Hello World",
+                    "summary": "A greeting message",
+                    "created": "2024-01-15T10:30:00.000Z"
+                  },
+                  {
+                    "id": 2,
+                    "text": "Second message",
+                    "summary": "Another message",
+                    "created": "2024-01-15T11:00:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new message",
+        "description": "Creates a new message with the provided text and summary. The id and created timestamp are auto-generated. Equivalent to the original Spring Boot POST / endpoint.",
+        "operationId": "createMessage",
+        "tags": ["Messages"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMessageRequest"
+              },
+              "example": {
+                "text": "Hello World",
+                "summary": "A greeting message"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Message created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "id": 1,
+                  "text": "Hello World",
+                  "summary": "A greeting message",
+                  "created": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error - missing or invalid fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                },
+                "example": {
+                  "error": "Validation Error",
+                  "message": "Validation failed",
+                  "statusCode": 400,
+                  "errors": [
+                    {
+                      "field": "text",
+                      "message": "Message is required."
+                    },
+                    {
+                      "field": "summary",
+                      "message": "Summary is required."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{id}": {
+      "get": {
+        "summary": "Get a message by ID",
+        "description": "Retrieves a single message by its unique identifier. Equivalent to the original Spring Boot GET /{id} endpoint.",
+        "operationId": "getMessageById",
+        "tags": ["Messages"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The unique identifier of the message",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with the message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "id": 1,
+                  "text": "Hello World",
+                  "summary": "A greeting message",
+                  "created": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid message ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Bad Request",
+                  "message": "Invalid message ID",
+                  "statusCode": 400
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Message with id 999 not found",
+                  "statusCode": 404
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing message",
+        "description": "Updates an existing message with the provided text and summary. Equivalent to the original Spring Boot modify flow (GET /modify/{id} + POST /).",
+        "operationId": "updateMessage",
+        "tags": ["Messages"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The unique identifier of the message to update",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMessageRequest"
+              },
+              "example": {
+                "text": "Updated message text",
+                "summary": "Updated summary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "id": 1,
+                  "text": "Updated message text",
+                  "summary": "Updated summary",
+                  "created": "2024-01-15T10:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a message",
+        "description": "Deletes a message by its unique identifier. Equivalent to the original Spring Boot GET /delete/{id} endpoint.",
+        "operationId": "deleteMessage",
+        "tags": ["Messages"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The unique identifier of the message to delete",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Message deleted successfully (no content)"
+          },
+          "400": {
+            "description": "Invalid message ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns the health status of the application including uptime.",
+        "operationId": "healthCheck",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Application is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "ok",
+                  "timestamp": "2024-01-15T10:30:00.000Z",
+                  "uptime": 120.5
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Message": {
+        "type": "object",
+        "description": "A message entity with auto-generated ID and creation timestamp",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Unique auto-incremented identifier",
+            "example": 1
+          },
+          "text": {
+            "type": "string",
+            "description": "The full text content of the message",
+            "example": "Hello World"
+          },
+          "summary": {
+            "type": "string",
+            "description": "A brief summary of the message",
+            "example": "A greeting message"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the message was created",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": ["id", "text", "summary", "created"]
+      },
+      "CreateMessageRequest": {
+        "type": "object",
+        "description": "Request body for creating a new message",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The full text content of the message. Cannot be empty.",
+            "minLength": 1,
+            "example": "Hello World"
+          },
+          "summary": {
+            "type": "string",
+            "description": "A brief summary of the message. Cannot be empty.",
+            "minLength": 1,
+            "example": "A greeting message"
+          }
+        },
+        "required": ["text", "summary"]
+      },
+      "UpdateMessageRequest": {
+        "type": "object",
+        "description": "Request body for updating an existing message",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The updated text content of the message. Cannot be empty.",
+            "minLength": 1,
+            "example": "Updated message text"
+          },
+          "summary": {
+            "type": "string",
+            "description": "The updated summary of the message. Cannot be empty.",
+            "minLength": 1,
+            "example": "Updated summary"
+          }
+        },
+        "required": ["text", "summary"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Standard error response format",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error type name",
+            "example": "NotFoundError"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message",
+            "example": "Message with id 999 not found"
+          },
+          "statusCode": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "example": 404
+          }
+        },
+        "required": ["error", "message", "statusCode"]
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "description": "Validation error response with field-level details",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error type name",
+            "example": "Validation Error"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message",
+            "example": "Validation failed"
+          },
+          "statusCode": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "example": 400
+          },
+          "errors": {
+            "type": "array",
+            "description": "Array of field-level validation errors",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "description": "The field that failed validation",
+                  "example": "text"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The validation error message",
+                  "example": "Message is required."
+                }
+              },
+              "required": ["field", "message"]
+            }
+          }
+        },
+        "required": ["error", "message", "statusCode", "errors"]
+      },
+      "HealthResponse": {
+        "type": "object",
+        "description": "Health check response",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Application health status",
+            "example": "ok"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Current server timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "uptime": {
+            "type": "number",
+            "description": "Server uptime in seconds",
+            "example": 120.5
+          }
+        },
+        "required": ["status", "timestamp", "uptime"]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT-based authentication. Note: The original Spring Boot app had no authentication. JWT is available as a skeleton for future use."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Messages",
+      "description": "Message CRUD operations"
+    },
+    {
+      "name": "System",
+      "description": "System health and monitoring endpoints"
+    }
+  ]
+}
